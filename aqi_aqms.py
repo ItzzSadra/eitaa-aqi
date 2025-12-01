@@ -19,7 +19,7 @@ def get_aqi(city: str) -> int | None:
     )
     btn.click()
     print("clicked city")
-    sleep(5)
+    sleep(2)
     value = driver.find_element(
         By.XPATH, "//*[@id[starts-with(., 'highcharts-')]]/div/div[1]/span/div/span[1]"
     ).text

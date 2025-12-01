@@ -21,12 +21,48 @@ def classify_aqi(aqi):
     else:
         return "خطرناک", "🟤"
 
+def safe_get_aqi(city, max_retries=5):
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"Getting AQI... (try {attempt})")
+            aqi_value = get_aqi(city)
+
+            if aqi_value is None:
+                raise ValueError("AQI is None")
+
+            aqi_value = int(aqi_value)
+            return aqi_value
+
+        except Exception as e:
+            print(f"Failed to get AQI: {e}")
+            time.sleep(3)
+
+    print("❌ Could not retrieve AQI after multiple retries.")
+    return None
+
+def safe_request(url, max_retries=5):
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"Sending message... (try {attempt})")
+            requests.get(url)
+            return True
+
+        except Exception as e:
+            print(f"Failed to send message: {e}")
+            time.sleep(3)
+
+    print("❌ Could not send message after retries.")
+    return False
+
 def get_aqi_function():
     EITAA_API_KEY = os.getenv('EITAA_API_KEY')
     CHAT_ID = "10964115"
 
-    # FIX: convert AQI to int
-    aqi = int(get_aqi("اصفهان"))
+    aqi = safe_get_aqi("اصفهان")
+
+    if aqi is None:
+        print("Skipping message — AQI unavailable.")
+        return
 
     status, status_emoji = classify_aqi(aqi)
 
@@ -38,13 +74,9 @@ def get_aqi_function():
 ☁ شاخص: {aqi} {status} {status_emoji}
 🪶@Esfahan_Tattili | اخبار مدارس اصفهان"""
 
+    url = f"https://eitaayar.ir/api/{EITAA_API_KEY}/sendMessage?chat_id={CHAT_ID}&text={data}&date=0&parse_mode=&pin=off&viewCountForDelete="
 
-    URL = f"https://eitaayar.ir/api/{EITAA_API_KEY}/sendMessage?chat_id={CHAT_ID}&text={data}&date=0&parse_mode=&pin=off&viewCountForDelete="
-
-    try:
-        requests.get(URL)
-    except:
-        print("Error sending to Eitaa")
+    safe_request(url)
 
 def countdown(hours=1):
     total_seconds = hours * 3600
