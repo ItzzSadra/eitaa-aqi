@@ -18,8 +18,11 @@ def get_aqi(city: str) -> str | None:
     for converting it to an integer and handling errors.
     """
     options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     driver = webdriver.Chrome(options=options)
-
+# no, its all me, ai cant write code for persian content
     try:
         driver.get(AQMS_URL)
         sleep(0.5)
