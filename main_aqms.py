@@ -21,7 +21,7 @@ DEFAULT_CITY = "اصفهان"
 COUNTDOWN_HOURS = 1
 REQUEST_TIMEOUT_SECONDS = 10
 
-AQI_HISTORY_FILE = Path("~/aqi_history.csv")
+AQI_HISTORY_FILE = Path.home() / "aqi_history.csv"
 
 
 def classify_aqi(aqi: int) -> Tuple[str, str]:
