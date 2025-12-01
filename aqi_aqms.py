@@ -9,17 +9,17 @@ def get_aqi(city: str) -> int | None:
     driver = webdriver.Chrome(options=options)
     # Open Google
     driver.get("https://aqms.doe.ir/App/")
-    sleep(2)
+    sleep(0.5)
     elem = driver.find_element(By.CLASS_NAME, "province")
     elem.click()
     print("opened menu")
-    sleep(2)
+    sleep(0.7)
     btn = driver.find_element(
         By.XPATH, f"//button[contains(@class, 'mat-menu-item') and contains(text(), ' {city} ')]"
     )
     btn.click()
     print("clicked city")
-    sleep(1)
+    sleep(5)
     value = driver.find_element(
         By.XPATH, "//*[@id[starts-with(., 'highcharts-')]]/div/div[1]/span/div/span[1]"
     ).text
