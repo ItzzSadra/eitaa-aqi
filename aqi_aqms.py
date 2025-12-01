@@ -41,7 +41,7 @@ def get_aqi(city: str) -> str | None:
             By.XPATH,
             "//*[@id[starts-with(., 'highcharts-')]]/div/div[1]/span/div/span[1]",
         ).text
-        print("AQI value retrieved from page")
+        print("AQI value retrieved from page", value)
 
         return value
     finally:
