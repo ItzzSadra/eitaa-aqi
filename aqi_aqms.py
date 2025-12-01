@@ -5,6 +5,8 @@ from time import sleep
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+
 
 
 AQMS_URL = "https://aqms.doe.ir/App/"
@@ -18,10 +20,11 @@ def get_aqi(city: str) -> str | None:
     for converting it to an integer and handling errors.
     """
     options = Options()
+    service = Service("/usr/bin/chromedriver")
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(service=service, options=options)
 # no, its all me, ai cant write code for persian content
     try:
         driver.get(AQMS_URL)

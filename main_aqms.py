@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import time
+import csv
+from pathlib import Path
 from datetime import datetime
 from typing import Tuple
 
@@ -18,6 +20,8 @@ CHAT_ID = "10379313"
 DEFAULT_CITY = "اصفهان"
 COUNTDOWN_HOURS = 1
 REQUEST_TIMEOUT_SECONDS = 10
+
+AQI_HISTORY_FILE = Path("aqi_history.csv")
 
 
 def classify_aqi(aqi: int) -> Tuple[str, str]:
@@ -55,6 +59,49 @@ def safe_get_aqi(city: str, max_retries: int = 5) -> int | None:
     return None
 
 
+def flow_detect(previous, now):
+    if previous == now:
+        return "بدون تغییر"
+    if now > previous:
+        return "افزایشی"
+    if now < previous:
+        return "کاهشی"
+
+
+def flow_emoji_for(flow: str) -> str:
+    if flow == "افزایشی":
+        return "📈"
+    if flow == "کاهشی":
+        return "📉"
+    return "➖"
+
+
+def save_previous_aqi(aqi: int) -> None:
+    """Save the current AQI to the CSV file."""
+    with open(AQI_HISTORY_FILE, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["previous_aqi"])
+        writer.writerow([aqi])
+
+
+def load_previous_aqi() -> int | None:
+    """Load previous AQI from the CSV file."""
+    if not AQI_HISTORY_FILE.exists():
+        return None
+
+    try:
+        with open(AQI_HISTORY_FILE, "r") as f:
+            reader = csv.reader(f)
+            next(reader)  # skip header
+            row = next(reader, None)
+            if row:
+                return int(row[0])
+    except Exception:
+        return None
+
+    return None
+
+
 def safe_request(url: str, max_retries: int = 5) -> bool:
     """Send a GET request with retries and timeout."""
     for attempt in range(1, max_retries + 1):
@@ -64,7 +111,7 @@ def safe_request(url: str, max_retries: int = 5) -> bool:
             response.raise_for_status()
             return True
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"Failed to send message: {exc}")
             time.sleep(3)
 
@@ -75,23 +122,37 @@ def safe_request(url: str, max_retries: int = 5) -> bool:
 def send_aqi_message() -> None:
     """Fetch the AQI and send it to the configured Eitaa chat."""
     if not EITAA_API_KEY:
-        print("❌ EITAA_API_KEY is not set in environment. Aborting send.")
+        print("❌ EITAA_API_KEY is not set. Aborting send.")
         return
 
     aqi = safe_get_aqi(DEFAULT_CITY)
-
     if aqi is None:
         print("Skipping message — AQI unavailable.")
         return
 
+    # Load previous AQI
+    previous_aqi = load_previous_aqi()
+
+    # Detect flow
+    if previous_aqi is None:
+        flow = "بدون اطلاعات قبلی"
+        flow_emoji = "➖"
+    else:
+        flow = flow_detect(previous_aqi, aqi)
+        flow_emoji = flow_emoji_for(flow)
+
+    # Save current AQI
+    save_previous_aqi(aqi)
+
+    # Status
     status, status_emoji = classify_aqi(aqi)
     current_time = datetime.now().strftime("%H:%M")
-    print(f"Current time: {current_time}")
 
     message = (
         "📊 شاخص آلودگی هوا\n"
-        f"⏰ آمار ساعت : {current_time}\n"
+        f"⏰ آمار ساعت: {current_time}\n"
         f"☁ شاخص: {aqi} {status} {status_emoji}\n"
+        f"{flow_emoji} روند: {flow}\n"
         "🪶@Esfahan_Tattili | اخبار مدارس اصفهان"
     )
 
@@ -106,12 +167,7 @@ def send_aqi_message() -> None:
 
 
 def countdown(hours: float = 1.0, bar_width: int = 30) -> None:
-    """
-    Display a countdown timer with a simple progress bar.
-
-    Example:
-        Next run in: 00:59:58 [███---------------------------]
-    """
+    """Display a countdown timer with a simple progress bar."""
     total_seconds = int(hours * 3600)
     elapsed = 0
 
@@ -131,9 +187,9 @@ def countdown(hours: float = 1.0, bar_width: int = 30) -> None:
             time.sleep(1)
             elapsed += 1
 
-        # Ensure we end on a full bar at 00:00:00
         print(f"\rNext run in: 00:00:00 [{'█' * bar_width}]", end="", flush=True)
         print()
+
     except KeyboardInterrupt:
         print("\nTimer interrupted by user.")
         raise SystemExit(0)
