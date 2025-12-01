@@ -196,10 +196,16 @@ def countdown(hours: float = 1.0, bar_width: int = 30) -> None:
 
 
 def main() -> None:
-    """Main loop: send AQI message, then wait before next run."""
+    """Main loop: send AQI message only between 08:00 and 00:00, then wait before next run."""
     while True:
-        send_aqi_message()
+        now = datetime.now()
+        if 8 <= now.hour < 24:  # Only run between 8:00 and 23:59
+            send_aqi_message()
+        else:
+            print("⏸ Between 00:00 and 08:00 — skipping AQI update.")
+
         countdown(COUNTDOWN_HOURS)
+
 
 
 if __name__ == "__main__":
