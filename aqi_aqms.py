@@ -1,33 +1,52 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
+from __future__ import annotations
+
 from time import sleep
+
+from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 
-def get_aqi(city: str) -> int | None:
+AQMS_URL = "https://aqms.doe.ir/App/"
+
+
+def get_aqi(city: str) -> str | None:
+    """
+    Retrieve the AQI value for the given city from the AQMS website.
+
+    Returns the raw AQI text (e.g. "42"). The caller is responsible
+    for converting it to an integer and handling errors.
+    """
     options = Options()
     driver = webdriver.Chrome(options=options)
-    # Open Google
-    driver.get("https://aqms.doe.ir/App/")
-    sleep(0.5)
-    elem = driver.find_element(By.CLASS_NAME, "province")
-    elem.click()
-    print("opened menu")
-    sleep(0.7)
-    btn = driver.find_element(
-        By.XPATH, f"//button[contains(@class, 'mat-menu-item') and contains(text(), ' {city} ')]"
-    )
-    btn.click()
-    print("clicked city")
-    sleep(2)
-    value = driver.find_element(
-        By.XPATH, "//*[@id[starts-with(., 'highcharts-')]]/div/div[1]/span/div/span[1]"
-    ).text
-    print("got value")
 
-    driver.quit()
+    try:
+        driver.get(AQMS_URL)
+        sleep(0.5)
 
-    return value
+        city_menu = driver.find_element(By.CLASS_NAME, "province")
+        city_menu.click()
+        print("Opened city menu")
+        sleep(0.7)
+
+        city_button = driver.find_element(
+            By.XPATH,
+            f"//button[contains(@class, 'mat-menu-item') and contains(text(), ' {city} ')]",
+        )
+        city_button.click()
+        print(f"Selected city: {city}")
+        sleep(2)
+
+        value = driver.find_element(
+            By.XPATH,
+            "//*[@id[starts-with(., 'highcharts-')]]/div/div[1]/span/div/span[1]",
+        ).text
+        print("AQI value retrieved from page")
+
+        return value
+    finally:
+        driver.quit()
+
 
 if __name__ == "__main__":
     city_aqi = get_aqi("اصفهان")

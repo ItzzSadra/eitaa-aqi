@@ -1,98 +1,150 @@
-import time
-import requests
-from aqi_aqms import get_aqi
-from dotenv import load_dotenv
+from __future__ import annotations
+
 import os
+import time
 from datetime import datetime
+from typing import Tuple
+
+import requests
+from dotenv import load_dotenv
+
+from aqi_aqms import get_aqi
+
 
 load_dotenv()
 
-def classify_aqi(aqi):
+EITAA_API_KEY = os.getenv("EITAA_API_KEY")
+CHAT_ID = "10964115"
+DEFAULT_CITY = "اصفهان"
+COUNTDOWN_HOURS = 1
+REQUEST_TIMEOUT_SECONDS = 10
+
+
+def classify_aqi(aqi: int) -> Tuple[str, str]:
+    """Return a human–readable AQI status (Persian) and an emoji."""
     if aqi <= 50:
         return "پاک", "🟢"
-    elif 51 <= aqi <= 100:
+    if 51 <= aqi <= 100:
         return "قابل قبول", "🟡"
-    elif 101 <= aqi <= 150:
+    if 101 <= aqi <= 150:
         return "ناسالم برای گروه های حساس", "🟠"
-    elif 151 <= aqi <= 200:
+    if 151 <= aqi <= 200:
         return "ناسالم", "🔴"
-    elif 201 <= aqi <= 300:
+    if 201 <= aqi <= 300:
         return "بسیار ناسالم", "🟣"
-    else:
-        return "خطرناک", "🟤"
+    return "خطرناک", "🟤"
 
-def safe_get_aqi(city, max_retries=5):
+
+def safe_get_aqi(city: str, max_retries: int = 5) -> int | None:
+    """Get AQI for a city with retry logic and basic error handling."""
     for attempt in range(1, max_retries + 1):
         try:
-            print(f"Getting AQI... (try {attempt})")
+            print(f"Getting AQI for {city}... (try {attempt})")
             aqi_value = get_aqi(city)
 
             if aqi_value is None:
                 raise ValueError("AQI is None")
 
-            aqi_value = int(aqi_value)
-            return aqi_value
+            return int(aqi_value)
 
-        except Exception as e:
-            print(f"Failed to get AQI: {e}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"Failed to get AQI: {exc}")
             time.sleep(3)
 
     print("❌ Could not retrieve AQI after multiple retries.")
     return None
 
-def safe_request(url, max_retries=5):
+
+def safe_request(url: str, max_retries: int = 5) -> bool:
+    """Send a GET request with retries and timeout."""
     for attempt in range(1, max_retries + 1):
         try:
             print(f"Sending message... (try {attempt})")
-            requests.get(url)
+            response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
+            response.raise_for_status()
             return True
 
-        except Exception as e:
-            print(f"Failed to send message: {e}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"Failed to send message: {exc}")
             time.sleep(3)
 
     print("❌ Could not send message after retries.")
     return False
 
-def get_aqi_function():
-    EITAA_API_KEY = os.getenv('EITAA_API_KEY')
-    CHAT_ID = "10964115"
 
-    aqi = safe_get_aqi("اصفهان")
+def send_aqi_message() -> None:
+    """Fetch the AQI and send it to the configured Eitaa chat."""
+    if not EITAA_API_KEY:
+        print("❌ EITAA_API_KEY is not set in environment. Aborting send.")
+        return
+
+    aqi = safe_get_aqi(DEFAULT_CITY)
 
     if aqi is None:
         print("Skipping message — AQI unavailable.")
         return
 
     status, status_emoji = classify_aqi(aqi)
-
     current_time = datetime.now().strftime("%H:%M")
-    print(current_time)
+    print(f"Current time: {current_time}")
 
-    data = f"""📊 شاخص آلودگی هوا
-⏰ آمار ساعت : {current_time}
-☁ شاخص: {aqi} {status} {status_emoji}
-🪶@Esfahan_Tattili | اخبار مدارس اصفهان"""
+    message = (
+        "📊 شاخص آلودگی هوا\n"
+        f"⏰ آمار ساعت : {current_time}\n"
+        f"☁ شاخص: {aqi} {status} {status_emoji}\n"
+        "🪶@Esfahan_Tattili | اخبار مدارس اصفهان"
+    )
 
-    url = f"https://eitaayar.ir/api/{EITAA_API_KEY}/sendMessage?chat_id={CHAT_ID}&text={data}&date=0&parse_mode=&pin=off&viewCountForDelete="
+    url = (
+        f"https://eitaayar.ir/api/{EITAA_API_KEY}/sendMessage"
+        f"?chat_id={CHAT_ID}"
+        f"&text={message}"
+        "&date=0&parse_mode=&pin=off&viewCountForDelete="
+    )
 
     safe_request(url)
 
-def countdown(hours=1):
-    total_seconds = hours * 3600
+
+def countdown(hours: float = 1.0, bar_width: int = 30) -> None:
+    """
+    Display a countdown timer with a simple progress bar.
+
+    Example:
+        Next run in: 00:59:58 [███---------------------------]
+    """
+    total_seconds = int(hours * 3600)
+    elapsed = 0
+
     try:
-        while total_seconds:
-            mins, secs = divmod(total_seconds, 60)
+        while elapsed < total_seconds:
+            remaining = total_seconds - elapsed
+            mins, secs = divmod(remaining, 60)
             hours_left, mins = divmod(mins, 60)
             timer = f"{hours_left:02d}:{mins:02d}:{secs:02d}"
-            print(f"\rNext run in: {timer}", end="")
+
+            progress = elapsed / total_seconds if total_seconds else 1
+            filled_length = int(bar_width * progress)
+            bar = "█" * filled_length + "-" * (bar_width - filled_length)
+
+            print(f"\rNext run in: {timer} [{bar}]", end="", flush=True)
+
             time.sleep(1)
-            total_seconds -= 1
+            elapsed += 1
+
+        # Ensure we end on a full bar at 00:00:00
+        print(f"\rNext run in: 00:00:00 [{'█' * bar_width}]", end="", flush=True)
         print()
     except KeyboardInterrupt:
-        print("\nTimer interrupted!")
-        quit()
+        print("\nTimer interrupted by user.")
+        raise SystemExit(0)
 
-while True:
-    get_aqi_function()
-    countdown(1)
+
+def main() -> None:
+    """Main loop: send AQI message, then wait before next run."""
+    while True:
+        send_aqi_message()
+        countdown(COUNTDOWN_HOURS)
+
+
+if __name__ == "__main__":
+    main()
