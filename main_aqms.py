@@ -14,7 +14,7 @@ from aqi_aqms import get_aqi
 load_dotenv()
 
 EITAA_API_KEY = os.getenv("EITAA_API_KEY")
-CHAT_ID = "10964115"
+CHAT_ID = "10379313"
 DEFAULT_CITY = "اصفهان"
 COUNTDOWN_HOURS = 1
 REQUEST_TIMEOUT_SECONDS = 10
@@ -47,7 +47,7 @@ def safe_get_aqi(city: str, max_retries: int = 5) -> int | None:
 
             return int(aqi_value)
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"Failed to get AQI: {exc}")
             time.sleep(3)
 
