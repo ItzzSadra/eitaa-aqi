@@ -28,12 +28,12 @@ def get_aqi(city: str) -> str | None:
 # no, its all me, ai cant write code for persian content
     try:
         driver.get(AQMS_URL)
-        sleep(0.5)
+        sleep(2)
 
         city_menu = driver.find_element(By.CLASS_NAME, "province")
         city_menu.click()
         print("Opened city menu")
-        sleep(0.7)
+        sleep(2)
 
         city_button = driver.find_element(
             By.XPATH,
@@ -41,7 +41,7 @@ def get_aqi(city: str) -> str | None:
         )
         city_button.click()
         print(f"Selected city: {city}")
-        sleep(2)
+        sleep(5)
 
         value = driver.find_element(
             By.XPATH,

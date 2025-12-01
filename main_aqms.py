@@ -39,7 +39,7 @@ def classify_aqi(aqi: int) -> Tuple[str, str]:
     return "خطرناک", "🟤"
 
 
-def safe_get_aqi(city: str, max_retries: int = 5) -> int | None:
+def safe_get_aqi(city: str, max_retries: int = 10) -> int | None:
     """Get AQI for a city with retry logic and basic error handling."""
     for attempt in range(1, max_retries + 1):
         try:
