@@ -18,7 +18,7 @@ load_dotenv()
 EITAA_API_KEY = os.getenv("EITAA_API_KEY")
 CHAT_ID = "10379313"
 DEFAULT_CITY = "اصفهان"
-COUNTDOWN_HOURS = 1
+COUNTDOWN_HOURS = 2
 REQUEST_TIMEOUT_SECONDS = 10
 
 AQI_HISTORY_FILE = Path.home() / "aqi_history.csv"
